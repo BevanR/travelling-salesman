@@ -74,7 +74,11 @@ export default class App extends React.Component {
   }
 
   search(query) {
-    this.requestPlaces(query).then(results => this.setState({results}))
+    if (query.length) {
+      this.requestPlaces(query).then(results => this.setState({results}))
+    } else {
+      this.setState({results: []})
+    }
   }
 
   requestPlaces(query) {
