@@ -1,5 +1,5 @@
 import React from 'react'
-import {StyleSheet, TextInput, View} from 'react-native'
+import {StyleSheet, Text, TextInput, View, FlatList} from 'react-native'
 import MapView from 'react-native-maps'
 
 export default class App extends React.Component {
@@ -37,7 +37,18 @@ export default class App extends React.Component {
           latitude && <MapView style={styles.map} initialRegion={region}/>
         }
 
-        <TextInput placeholder="🔍 Search here" style={styles.search}/>
+        <TextInput
+          placeholder="🔍 Search here"
+          style={styles.search}
+          returnKeyType='search'
+          onChangeText={query => this.setState({text: query})}
+        />
+
+        <FlatList
+          data={[{key: 'a'}, {key: 'b'}]}
+          renderItem={({item}) => <Text style={styles.resultItem}>{item.key}</Text>}
+          style={styles.results}
+        />
       </View>
     )
   }
@@ -63,5 +74,15 @@ const styles = StyleSheet.create({
     borderColor: 'grey',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
+  },
+  results: {
+    backgroundColor: 'white',
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+  },
+  resultItem: {
+    borderTopColor: 'black',
+    borderTopWidth: 1,
   },
 })
