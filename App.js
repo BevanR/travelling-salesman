@@ -1,21 +1,23 @@
 import React from 'react'
-import {StyleSheet, Text, TextInput, View, FlatList} from 'react-native'
+import {FlatList, StyleSheet, Text, TextInput, View} from 'react-native'
 import MapView from 'react-native-maps'
+import * as uuid from 'uuid'
+import * as qs from 'qs'
 
 export default class App extends React.Component {
   constructor(props) {
     super(props)
 
-    this.state = {
-      deviceLocation: {},
-    }
+    this.session = uuid.v4()
+    this.googleApiKey = 'AIzaSyDFZZaK5LSTrR6kJ03CjIn0DoOAGT5C6fA'
+
+    this.state = {}
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const {latitude, longitude} = position.coords
-        return this.setState({
-          deviceLocation: {latitude, longitude},
-        })
+        const delta = 0.05
+        return this.setState({latitude, longitude, latitudeDelta: delta, longitudeDelta: delta})
       },
       (error) => alert(error.message),
       {
@@ -27,31 +29,73 @@ export default class App extends React.Component {
   }
 
   render() {
-    const {latitude, longitude} = this.state.deviceLocation
-    const delta = 0.05
-    const region = {latitude, longitude, latitudeDelta: delta, longitudeDelta: delta}
+    const {latitude, longitude, latitudeDelta, longitudeDelta} = this.state
+    const results = [{key: 'a'}, {key: 'b'}]
 
     return (
       <View style={styles.container}>
         {
-          latitude && <MapView style={styles.map} initialRegion={region}/>
+          latitude && <MapView
+            style={styles.map}
+            initialRegion={{latitude, longitude, latitudeDelta, longitudeDelta}}
+            onRegionChange={({latitude, longitude, latitudeDelta, longitudeDelta}) => this.setState({
+              latitude,
+              longitude,
+              latitudeDelta,
+              longitudeDelta,
+            })}
+          />
         }
 
         <TextInput
           placeholder="🔍 Search here"
           style={styles.search}
           returnKeyType='search'
-          onChangeText={query => this.setState({text: query})}
+          onChangeText={query => this.search(query)}
         />
 
         <FlatList
-          data={[{key: 'a'}, {key: 'b'}]}
+          data={results}
           renderItem={({item}) => <Text style={styles.resultItem}>{item.key}</Text>}
           style={styles.results}
         />
       </View>
     )
   }
+
+  search(query) {
+    this.requestPlaces(query).then(results => console.log({results}))
+  }
+
+  requestPlaces(query) {
+    const parameters = {
+      input: query,
+      // TODO Include offset for text caret.
+
+      // Prefer locations close to current map location.
+      location: this.llString,
+
+      // Use the map's height as a measure of "close".
+      radius: 10000 * this.state.latitudeDelta,
+
+      // Keys for API rate limiting.
+      key: this.googleApiKey,
+      sessiontoken: this.session,
+    }
+    const url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?' + qs.stringify(parameters)
+
+    return fetch(url)
+      .then(response => response.json())
+      .then(data => data.predictions.map(({structured_formatting}) => ({
+        label: structured_formatting.main_text,
+      })))
+  }
+
+  get llString() {
+    const {latitude, longitude} = this.state
+    return latitude ? latitude + ',' + longitude : ''
+  }
+
 }
 
 const styles = StyleSheet.create({
