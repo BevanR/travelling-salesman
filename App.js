@@ -1,5 +1,5 @@
 import React from 'react'
-import {StyleSheet, Text, TextInput, View, Button} from 'react-native'
+import {Button, StyleSheet, Text, TextInput, View} from 'react-native'
 import MapView from 'react-native-maps'
 import * as uuid from 'uuid'
 import * as qs from 'qs'
@@ -74,15 +74,16 @@ export default class App extends React.Component {
   }
 
   search(query) {
+    this.setState({results: []})
     if (query.length) {
+      // TODO Handle race conditions when some responses are slow.
+      // Google responses are consistently fast, so it is difficult to reproduce race conditions.
       this.requestPlaces(query).then(results => this.setState({results}))
-    } else {
-      this.setState({results: []})
     }
   }
 
   requestPlaces(query) {
-    const parameters = {
+    const url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?' + qs.stringify({
       input: query,
       // TODO Include offset for text caret.
 
@@ -95,8 +96,7 @@ export default class App extends React.Component {
       // Keys for API rate limiting.
       key: this.googleApiKey,
       sessiontoken: this.session,
-    }
-    const url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?' + qs.stringify(parameters)
+    })
 
     return fetch(url)
       .then(response => response.json())
