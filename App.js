@@ -1,5 +1,5 @@
 import React from 'react'
-import {FlatList, StyleSheet, Text, TextInput, View} from 'react-native'
+import {StyleSheet, Text, TextInput, View, Button} from 'react-native'
 import MapView from 'react-native-maps'
 import * as uuid from 'uuid'
 import * as qs from 'qs'
@@ -11,7 +11,9 @@ export default class App extends React.Component {
     this.session = uuid.v4()
     this.googleApiKey = 'AIzaSyDFZZaK5LSTrR6kJ03CjIn0DoOAGT5C6fA'
 
-    this.state = {}
+    this.state = {
+      results: [],
+    }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -29,23 +31,20 @@ export default class App extends React.Component {
   }
 
   render() {
-    const {latitude, longitude, latitudeDelta, longitudeDelta} = this.state
-    const results = [{key: 'a'}, {key: 'b'}]
+    const {results, latitude, longitude, latitudeDelta, longitudeDelta} = this.state
 
     return (
       <View style={styles.container}>
-        {
-          latitude && <MapView
-            style={styles.map}
-            initialRegion={{latitude, longitude, latitudeDelta, longitudeDelta}}
-            onRegionChange={({latitude, longitude, latitudeDelta, longitudeDelta}) => this.setState({
-              latitude,
-              longitude,
-              latitudeDelta,
-              longitudeDelta,
-            })}
-          />
-        }
+        {latitude && <MapView
+          style={styles.map}
+          initialRegion={{latitude, longitude, latitudeDelta, longitudeDelta}}
+          onRegionChange={({latitude, longitude, latitudeDelta, longitudeDelta}) => this.setState({
+            latitude,
+            longitude,
+            latitudeDelta,
+            longitudeDelta,
+          })}
+        />}
 
         <TextInput
           placeholder="🔍 Search here"
@@ -54,17 +53,28 @@ export default class App extends React.Component {
           onChangeText={query => this.search(query)}
         />
 
-        <FlatList
-          data={results}
-          renderItem={({item}) => <Text style={styles.resultItem}>{item.key}</Text>}
-          style={styles.results}
-        />
+        {(results.length > 0) && <View style={styles.results}>
+          {results.map(item => (
+            <View key={item.id} style={styles.resultItem}>
+              {/* TODO Make a round button */}
+              <Button
+                title="+"
+                onPress={() => console.log('pressed', item.id)}
+              />
+
+              <View style={styles.resultText}>
+                <Text>{item.label}</Text>
+                <Text style={styles.resultSubtext}>{item.subtext}</Text>
+              </View>
+            </View>
+          ))}
+        </View>}
       </View>
     )
   }
 
   search(query) {
-    this.requestPlaces(query).then(results => console.log({results}))
+    this.requestPlaces(query).then(results => this.setState({results}))
   }
 
   requestPlaces(query) {
@@ -86,16 +96,17 @@ export default class App extends React.Component {
 
     return fetch(url)
       .then(response => response.json())
-      .then(data => data.predictions.map(({structured_formatting}) => ({
-        label: structured_formatting.main_text,
-      })))
+      .then(data => data.predictions.map(prediction => {
+        // console.log(prediction)
+        const {id, structured_formatting: {main_text: label, secondary_text: subtext}} = prediction
+        return {id, label, subtext}
+      }))
   }
 
   get llString() {
     const {latitude, longitude} = this.state
     return latitude ? latitude + ',' + longitude : ''
   }
-
 }
 
 const styles = StyleSheet.create({
@@ -122,11 +133,22 @@ const styles = StyleSheet.create({
   results: {
     backgroundColor: 'white',
     position: 'absolute',
-    bottom: 0,
+    top: 100,
     width: '100%',
+    borderTopWidth: 1,
+    borderColor: 'black',
   },
   resultItem: {
-    borderTopColor: 'black',
-    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'black',
+    padding: 5,
+    flexDirection: 'row',
+  },
+  resultSubtext: {
+    fontSize: 10,
+    color: 'grey',
+  },
+  resultText: {
+    paddingLeft: 5,
   },
 })
