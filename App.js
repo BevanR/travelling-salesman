@@ -1,6 +1,5 @@
 import React from 'react'
-import {StyleSheet, View} from 'react-native'
-import {SearchBar} from 'react-native-elements'
+import {StyleSheet, TextInput, View} from 'react-native'
 import MapView from 'react-native-maps'
 
 export default class App extends React.Component {
@@ -38,7 +37,7 @@ export default class App extends React.Component {
           latitude && <MapView style={styles.map} initialRegion={region}/>
         }
 
-        <SearchBar placeholder="Search here" style={styles.search} containerStyle={styles.searchContainer}/>
+        <TextInput placeholder="🔍 Search here" style={styles.search}/>
       </View>
     )
   }
@@ -59,10 +58,10 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     height: 50,
-    padding: 10,
-  },
-  searchContainer: {
-    backgroundColor: 'transparent',
-    // backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'grey',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
 })
