@@ -1,5 +1,5 @@
 import React from 'react'
-import {Button, StyleSheet, Text, TextInput, View} from 'react-native'
+import {Button, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native'
 import MapView from 'react-native-maps'
 import * as uuid from 'uuid'
 import * as qs from 'qs'
@@ -35,6 +35,7 @@ export default class App extends React.Component {
   render() {
     const {results, destinations, latitude, longitude, latitudeDelta, longitudeDelta} = this.state
 
+    // TODO Split into multiple components.
     return (
       <View style={styles.container}>
         {latitude && <MapView
@@ -53,9 +54,10 @@ export default class App extends React.Component {
           style={styles.search}
           returnKeyType='search'
           onChangeText={query => this.search(query)}
+          ref={input => { this.searchInput = input }}
         />
 
-        {(results.length > 0) && <View style={styles.places}>
+        {(results.length > 0) && <View style={{...styles.results, ...styles.places}}>
           {results.map(item => (
             <View key={item.id} style={styles.place}>
               {/* TODO Make a round button */}
@@ -72,46 +74,59 @@ export default class App extends React.Component {
           ))}
         </View>}
 
-        {(results.length < 1 && destinations.length > 0) && <View style={styles.places}>
-          {destinations.map((item, index) => (
-            <View key={item.id} style={styles.place}>
-              <Text>({index + 1})</Text>
+        {(results.length < 1 && destinations.length > 0) && <View>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', padding: 5}}>
+            <Text style={{fontSize: 25}}>Destinations</Text>
 
-              <View style={styles.placeText}>
-                <Text>{item.label}</Text>
-                <Text style={styles.placeSubtext}>{item.subtext}</Text>
+            <Button style={{}} title='Directions' onPress={() => alert('TODO Get directions.')}/>
+          </View>
+
+          <ScrollView style={styles.places}>
+            {destinations.map((item, index) => (
+              <View key={item.id} style={styles.place}>
+                <Text>({index + 1})</Text>
+
+                <View style={styles.placeText}>
+                  <Text>{item.label}</Text>
+                  <Text style={styles.placeSubtext}>{item.subtext}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </ScrollView>
         </View>}
       </View>
     )
   }
 
   search(query) {
+    // TODO Show that some data is coming by using a spinner.
     this.setState({results: []})
 
     if (query.length) {
       // TODO Handle race conditions when some responses are slow.
-      // Google responses are consistently fast, so it is difficult to reproduce race conditions.
+      // Google responses are usually fast, so it is difficult to reproduce race conditions.
       this.requestPlaces(query).then(results => this.setState({results}))
     }
   }
 
-  addDestination(coordinates, label, subtext) {
+  addDestination(item) {
     this.setState({
       results: [],
-      destinations: [...this.state.destinations, {coordinates, label, subtext}],
+      destinations: [...this.state.destinations, item],
     })
   }
 
   addDestinationFromGooglePlacesAPI({id, label, subtext}) {
-    this.requestPlace(id).then(coordinates => this.addDestination(coordinates, label, subtext))
+    // TODO Dismiss keyboard.
+    this.searchInput.clear()
+    const coordinates = this.requestCoordinates(id)
+    this.addDestination({id, label, subtext, coordinates})
   }
 
   requestPlaces(query) {
     const parameters = {
       input: query,
+
       // TODO Include offset for text caret.
 
       // Prefer locations close to current map location.
@@ -128,7 +143,7 @@ export default class App extends React.Component {
       }))
   }
 
-  requestPlace(id) {
+  requestCoordinates(id) {
     const parameters = {
       placeid: id,
       fields: 'geometry',
@@ -149,13 +164,13 @@ export default class App extends React.Component {
     parameters.sessiontoken = this.session
     const query = qs.stringify(parameters)
 
+    // TODO Consider using Redux or similar for state management.
     return fetch(`https://maps.googleapis.com/maps/api/place/${resource}/json?${query}`)
       .then(response => response.json())
       .then(data => data.status === 'OK'
         ? data
         : alert('Sorry. Something went wrong. You could try restarting the app.'),
       )
-
   }
 
   get llString() {
@@ -185,11 +200,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
-  places: {
-    backgroundColor: 'white',
+  results: {
     position: 'absolute',
     top: 100,
     width: '100%',
+  },
+  places: {
+    backgroundColor: 'white',
     borderTopWidth: 1,
     borderColor: 'black',
   },

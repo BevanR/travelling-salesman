@@ -24,6 +24,11 @@
     ],
     "ios": {
       "supportsTablet": true
-    }
+    },
+    "android": {
+      "package": "com.BevanR.TravellingSalesman"
+    },
+    "description": "",
+    "githubUrl": "https://github.com/BevanR/travelling-salesman"
   }
 }
