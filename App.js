@@ -9,7 +9,7 @@ export default class App extends React.Component {
     super(props)
 
     this.session = uuid.v4()
-    this.googleApiKey = 'AIzaSyDFZZaK5LSTrR6kJ03CjIn0DoOAGT5C6fA'
+    this.googleApiKey = process.env.GOOGLE_API_KEY
 
     this.state = {
       results: [],
@@ -78,7 +78,9 @@ export default class App extends React.Component {
     if (query.length) {
       // TODO Handle race conditions when some responses are slow.
       // Google responses are consistently fast, so it is difficult to reproduce race conditions.
-      this.requestPlaces(query).then(results => this.setState({results}))
+      this.requestPlaces(query)
+        .then(results => this.setState({results}))
+        .catch(error => alert('Sorry. Something went wrong. You could try restarting the app.'))
     }
   }
 
@@ -100,8 +102,8 @@ export default class App extends React.Component {
 
     return fetch(url)
       .then(response => response.json())
+      .then(data => data.status === 'OK' ? data : alert('Google Places API request failed.'))
       .then(data => data.predictions.map(prediction => {
-        // console.log(prediction)
         const {id, structured_formatting: {main_text: label, secondary_text: subtext}} = prediction
         return {id, label, subtext}
       }))

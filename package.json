@@ -15,6 +15,7 @@
     "uuid": "^3.3.2"
   },
   "devDependencies": {
+    "babel-plugin-transform-inline-environment-variables": "^0.4.3",
     "babel-preset-expo": "^5.0.0"
   },
   "private": true
