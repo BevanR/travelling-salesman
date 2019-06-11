@@ -4,6 +4,7 @@ import MapView from 'react-native-maps'
 import * as uuid from 'uuid'
 import * as qs from 'qs'
 
+// noinspection JSUnusedGlobalSymbols
 export default class App extends React.Component {
   constructor(props) {
     super(props)
@@ -31,7 +32,7 @@ export default class App extends React.Component {
   }
 
   render() {
-    const {results, latitude, longitude, latitudeDelta, longitudeDelta} = this.state
+    const {results, destinations, latitude, longitude, latitudeDelta, longitudeDelta} = this.state
 
     return (
       <View style={styles.container}>
@@ -53,18 +54,31 @@ export default class App extends React.Component {
           onChangeText={query => this.search(query)}
         />
 
-        {(results.length > 0) && <View style={styles.results}>
+        {(results.length) && <View style={styles.places}>
           {results.map(item => (
-            <View key={item.id} style={styles.resultItem}>
+            <View key={item.id} style={styles.place}>
               {/* TODO Make a round button */}
               <Button
                 title="+"
-                onPress={() => console.log('pressed', item.id)}
+                onPress={() => this.addDestinationFromGooglePlacesAPI(item)}
               />
 
-              <View style={styles.resultText}>
+              <View style={styles.placeText}>
                 <Text>{item.label}</Text>
-                <Text style={styles.resultSubtext}>{item.subtext}</Text>
+                <Text style={styles.placeSubtext}>{item.subtext}</Text>
+              </View>
+            </View>
+          ))}
+        </View>}
+
+        {(!results.length < 1 && destinations.length) && <View style={styles.places}>
+          {destinations.map((item, index) => (
+            <View key={item.id} style={styles.place}>
+              <Text>({index + 1})</Text>
+
+              <View style={styles.placeText}>
+                <Text>{item.label}</Text>
+                <Text style={styles.placeSubtext}>{item.subtext}</Text>
               </View>
             </View>
           ))}
@@ -75,17 +89,27 @@ export default class App extends React.Component {
 
   search(query) {
     this.setState({results: []})
+
     if (query.length) {
       // TODO Handle race conditions when some responses are slow.
       // Google responses are consistently fast, so it is difficult to reproduce race conditions.
-      this.requestPlaces(query)
-        .then(results => this.setState({results}))
-        .catch(error => alert('Sorry. Something went wrong. You could try restarting the app.'))
+      this.requestPlaces(query).then(results => this.setState({results}))
     }
   }
 
+  addDestination(coordinates, label, subtext) {
+    this.setState({
+      results: [],
+      destinations: [...this.state.destinations, {coordinates, label, subtext}],
+    })
+  }
+
+  addDestinationFromGooglePlacesAPI({id, label, subtext}) {
+    this.requestPlace(id).then(coordinates => this.addDestination(coordinates, label, subtext))
+  }
+
   requestPlaces(query) {
-    const url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?' + qs.stringify({
+    const parameters = {
       input: query,
       // TODO Include offset for text caret.
 
@@ -94,19 +118,43 @@ export default class App extends React.Component {
 
       // Use the map's height as a measure of "close".
       radius: 10000 * this.state.latitudeDelta,
+    }
 
-      // Keys for API rate limiting.
-      key: this.googleApiKey,
-      sessiontoken: this.session,
-    })
-
-    return fetch(url)
-      .then(response => response.json())
-      .then(data => data.status === 'OK' ? data : alert('Google Places API request failed.'))
-      .then(data => data.predictions.map(prediction => {
-        const {id, structured_formatting: {main_text: label, secondary_text: subtext}} = prediction
+    return this.googlePlacesAPIRequest('autocomplete', parameters)
+      .then(data => data['predictions'].map(prediction => {
+        const {place_id: id, structured_formatting: {main_text: label, secondary_text: subtext}} = prediction
         return {id, label, subtext}
       }))
+  }
+
+  requestPlace(id) {
+    const parameters = {
+      placeid: id,
+      fields: 'geometry',
+    }
+
+    return this.googlePlacesAPIRequest('details', parameters).then(data => {
+      const {lat, lon} = data.result['geometry'].location
+      return {
+        latitude: lat,
+        longitude: lon,
+      }
+    })
+  }
+
+  googlePlacesAPIRequest(resource, parameters) {
+    // Keys for API rate limiting.
+    parameters.key = this.googleApiKey
+    parameters.sessiontoken = this.session
+    const query = qs.stringify(parameters)
+
+    return fetch(`https://maps.googleapis.com/maps/api/place/${resource}/json?${query}`)
+      .then(response => response.json())
+      .then(data => data.status === 'OK'
+        ? data
+        : alert('Sorry. Something went wrong. You could try restarting the app.'),
+      )
+
   }
 
   get llString() {
@@ -136,7 +184,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
-  results: {
+  places: {
     backgroundColor: 'white',
     position: 'absolute',
     top: 100,
@@ -144,17 +192,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: 'black',
   },
-  resultItem: {
+  place: {
     borderBottomWidth: 1,
     borderColor: 'black',
     padding: 5,
     flexDirection: 'row',
   },
-  resultSubtext: {
+  placeSubtext: {
     fontSize: 10,
     color: 'grey',
   },
-  resultText: {
+  placeText: {
     paddingLeft: 5,
   },
 })
