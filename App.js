@@ -14,6 +14,7 @@ export default class App extends React.Component {
 
     this.state = {
       results: [],
+      destinations: [],
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -54,7 +55,7 @@ export default class App extends React.Component {
           onChangeText={query => this.search(query)}
         />
 
-        {(results.length) && <View style={styles.places}>
+        {(results.length > 0) && <View style={styles.places}>
           {results.map(item => (
             <View key={item.id} style={styles.place}>
               {/* TODO Make a round button */}
@@ -71,7 +72,7 @@ export default class App extends React.Component {
           ))}
         </View>}
 
-        {(!results.length < 1 && destinations.length) && <View style={styles.places}>
+        {(results.length < 1 && destinations.length > 0) && <View style={styles.places}>
           {destinations.map((item, index) => (
             <View key={item.id} style={styles.place}>
               <Text>({index + 1})</Text>
